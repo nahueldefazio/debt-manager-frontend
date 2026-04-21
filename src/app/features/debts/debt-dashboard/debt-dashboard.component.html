@@ -1,0 +1,255 @@
+<div class="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+  <div class="max-w-3xl mx-auto space-y-6">
+    
+    <header class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">Cobranzas</h1>
+        <p class="text-slate-500 mt-1">Gestiona tus deudas y envía recordatorios fácilmente.</p>
+      </div>
+      <a href="https://t.me/cobranzas_nahuel_bot" target="_blank" rel="noopener noreferrer"
+        class="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#229ED9] hover:bg-[#1a8fc4] text-white text-sm font-semibold transition-all shadow-sm hover:shadow-md active:scale-95">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+        </svg>
+        Bot Telegram
+      </a>
+    </header>
+
+    <!-- Tarjeta de Total Acumulado -->
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 relative overflow-hidden">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total por cobrar</h2>
+            <select 
+              [ngModel]="selectedCurrency()" 
+              (ngModelChange)="selectedCurrency.set($event)"
+              class="text-xs font-bold bg-slate-100 text-slate-700 rounded-md border-transparent py-1 pl-2 pr-7 focus:border-emerald-500 focus:ring-emerald-500 cursor-pointer shadow-sm">
+              <option value="ARS">ARS</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
+          @if (isLoading()) {
+            <p class="text-4xl font-extrabold text-slate-300">
+              <span class="text-2xl mr-1">{{ selectedCurrency() === 'EUR' ? '€' : '$' }}</span><span class="loading-dots"></span>
+            </p>
+          } @else {
+            <p class="text-4xl font-extrabold text-emerald-600">
+              <span class="text-2xl mr-1">{{ selectedCurrency() === 'EUR' ? '€' : '$' }}</span>{{ totalAmount() | number:'1.2-2' }}
+            </p>
+          }
+        </div>
+        <div class="text-right flex flex-col gap-1 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+          <span class="font-semibold text-slate-700">Cotizaciones (Venta)</span>
+          <span>USD: @if (usdRate()) { $ {{ usdRate() | number:'1.2-2' }} } @else { Cargando... }</span>
+          <span>EUR: @if (eurRate()) { $ {{ eurRate() | number:'1.2-2' }} } @else { Cargando... }</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Formulario para Nueva Deuda -->
+    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <h3 class="text-lg font-semibold mb-4 text-slate-800">
+        {{ editingDebtId() ? 'Editar Deuda' : 'Agregar Nueva Deuda' }}
+      </h3>
+      <form (ngSubmit)="saveDebt()" #debtForm="ngForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <div class="col-span-1 md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+          <input type="text" [(ngModel)]="newDebt.description" name="description" required
+            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2.5 border"
+            placeholder="Ej. Alquiler de marzo">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Monto Total</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span class="text-slate-500 sm:text-sm">$</span>
+            </div>
+            <input type="number" [(ngModel)]="newDebt.amount" name="amount" required min="1"
+              class="w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm pl-7 p-2.5 border"
+              placeholder="0.00">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Moneda</label>
+          <select [(ngModel)]="newDebt.currency" name="currency"
+            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2.5 border">
+            <option value="ARS">ARS</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Cuotas</label>
+          <select [(ngModel)]="newDebt.totalInstallments" name="totalInstallments" required
+            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2.5 border">
+            <option [ngValue]="1">1 cuota (Pago único)</option>
+            <option [ngValue]="2">2 cuotas</option>
+            <option [ngValue]="3">3 cuotas</option>
+            <option [ngValue]="6">6 cuotas</option>
+            <option [ngValue]="9">9 cuotas</option>
+            <option [ngValue]="12">12 cuotas</option>
+            <option [ngValue]="18">18 cuotas</option>
+            <option [ngValue]="24">24 cuotas</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">1er Vencimiento</label>
+          <input type="date" [(ngModel)]="newDebt.dueDate" name="dueDate" required
+            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2.5 border">
+        </div>
+
+        <div class="col-span-1 md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">WhatsApp del Deudor</label>
+          <input type="text" [(ngModel)]="newDebt.debtorPhone" name="debtorPhone" required
+            class="w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-2.5 border"
+            placeholder="Ej. +5491123456789">
+          <p class="mt-1 text-xs text-slate-500">Incluir el código de país (ej. +54)</p>
+        </div>
+
+        <div class="col-span-1 md:col-span-2 flex justify-end gap-2 mt-2">
+          @if (editingDebtId()) {
+            <button type="button" (click)="cancelEdit()"
+              class="inline-flex items-center justify-center rounded-lg bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-300">
+              Cancelar
+            </button>
+          }
+          <button type="submit" [disabled]="!debtForm.form.valid || isSubmitting()"
+            class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
+            @if (isSubmitting()) {
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              Guardando...
+            } @else {
+              {{ editingDebtId() ? 'Guardar Cambios' : 'Registrar Deuda' }}
+            }
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Lista de Deudas -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold flex items-center gap-3 capitalize">
+          <button (click)="prevMonth()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500">&larr;</button>
+          {{ currentMonthDate() | date:'MMM yyyy' }}
+          <button (click)="nextMonth()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500">&rarr;</button>
+        </h3>
+        <span class="bg-slate-200 text-slate-700 text-xs font-bold px-2 py-1 rounded-full">
+          {{ activeDebts().length }}
+        </span>
+      </div>
+      
+      @if (isLoading()) {
+        <div class="flex flex-col items-center justify-center py-12 px-4 bg-white rounded-2xl border border-slate-200">
+          <svg class="animate-spin h-10 w-10 text-emerald-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p class="text-slate-500 font-medium text-center">Cargando tus deudas...</p>
+        </div>
+      } @else if (activeDebts().length === 0) {
+        <div class="flex flex-col items-center justify-center py-12 px-4 bg-white rounded-2xl border border-dashed border-slate-300">
+          <div class="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+            <svg class="w-9 h-9 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <p class="text-slate-700 font-semibold text-base">¡Todo al día!</p>
+          <p class="text-slate-400 text-sm mt-1 text-center">No hay deudas activas para este mes.</p>
+        </div>
+      } @else {
+        <div class="space-y-3">
+          @for (debt of activeDebts(); track debt.id) {
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:shadow-md">
+              
+              <div class="flex-1">
+                <h4 class="font-bold text-slate-800 text-lg">{{ debt.description }}</h4>
+                <div class="flex flex-wrap items-center gap-2 text-sm text-slate-500 mt-1.5">
+                  <span class="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                    {{ debt.amount }} {{ debt.currency }}
+                  </span>
+                  @if (debt.currency !== 'ARS') {
+                    <span class="text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                      (~ARS {{ getConvertedAmount(debt.amount, debt.currency) | number:'1.2-2' }})
+                    </span>
+                  }
+                  @if (debt.totalInstallments && debt.totalInstallments > 1) {
+                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Cuota {{ debt.currentInstallment }}/{{ debt.totalInstallments }}
+                    </span>
+                  }
+                  <span class="hidden sm:inline text-slate-300">&bull;</span>
+                  <span class="flex items-center gap-1.5 text-slate-600 font-medium">
+                    <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.435h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    {{ debt.debtorPhone }}
+                  </span>
+                </div>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0 w-full sm:w-auto">
+                <button 
+                  (click)="editDebt(debt)"
+                  class="flex-1 sm:flex-none inline-flex items-center justify-center p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" title="Editar">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                </button>
+                <button 
+                  (click)="deleteDebt(debt.id)"
+                  class="flex-1 sm:flex-none inline-flex items-center justify-center p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Eliminar">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+                <button 
+                  (click)="sendWhatsAppReminder(debt.id)"
+                  [disabled]="isGeneratingWa() === debt.id"
+                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 active:scale-95 disabled:opacity-75 disabled:cursor-wait"
+                >
+                  @if (isGeneratingWa() === debt.id) {
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Generando...
+                  } @else {
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.435h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    Cobrar
+                  }
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+  </div>
+
+  <!-- Modal de Confirmación de Eliminación -->
+  @if (debtToDelete()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all">
+        <div class="p-6">
+          <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          </div>
+          <h3 class="text-lg font-bold text-center text-slate-800 mb-2">¿Eliminar esta deuda?</h3>
+          <p class="text-slate-500 text-sm text-center">Esta acción no se puede deshacer. Se borrará permanentemente de tu registro mensual.</p>
+        </div>
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+          <button (click)="cancelDelete()" class="flex-1 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200">
+            Cancelar
+          </button>
+          <button (click)="confirmDelete()" [disabled]="isDeleting()" class="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm disabled:opacity-75 disabled:cursor-wait">
+            @if (isDeleting()) {
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              Eliminando...
+            } @else {
+              Sí, eliminar
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
