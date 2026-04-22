@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Debt } from '../../../models/debt.model';
 import { DebtService } from '../../../core/services/debt.service';
 import { CurrencyService } from '../../../core/services/currency.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-debt-dashboard',
@@ -16,8 +17,14 @@ import { CurrencyService } from '../../../core/services/currency.service';
 export class DebtDashboardComponent implements OnInit {
   private debtService = inject(DebtService);
   private currencyService = inject(CurrencyService);
+  private authService = inject(AuthService);
 
-  // --- Manejo de Estado (Signals) ---
+  currentUser = this.authService.currentUser;
+
+  logout() {
+    this.authService.logout();
+  }
+
   debts = signal<Debt[]>([]);
   usdRate = signal<number | null>(null);
   eurRate = signal<number | null>(null);
